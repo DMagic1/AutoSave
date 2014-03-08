@@ -44,18 +44,15 @@ namespace AutoSave
         }
         
         public void saveBackup(GameScenes scene)
-        {
-            scene = HighLogic.LoadedScene;
-            if (scene == GameScenes.MAINMENU)
+        {            
+            if (HighLogic.LoadedScene == GameScenes.MAINMENU)
             {
                 DateTime oldestFile = new DateTime(2050,1,1);
                 string replaceBackup = null;
-                string activeDirectory = Path.Combine(Path.Combine(new DirectoryInfo(KSPUtil.ApplicationRootPath).FullName, "saves"), HighLogic.fetch.GameSaveFolder);
-                
+                string activeDirectory = Path.Combine(Path.Combine(new DirectoryInfo(KSPUtil.ApplicationRootPath).FullName, "saves"), HighLogic.fetch.GameSaveFolder);                
                 path = Path.Combine(new DirectoryInfo(KSPUtil.ApplicationRootPath).FullName, "GameData/AutoSave/Settings.cfg").Replace("\\","/");
-                FileInfo settings = new FileInfo(path);
 
-                if (settings.Exists)
+                if (File.Exists(path))       //Load Settings.cfg to check for change in max number of saves
                 {
                     max = getMaxSave("MaxSaves");
                     print("Changing max saves value to " + max.ToString());
@@ -63,18 +60,18 @@ namespace AutoSave
 
                 for (int i = 0; i < max; i++)
                 {
-                    FileInfo backup = new FileInfo(Path.Combine(activeDirectory, "Persistent Backup " + i.ToString() + ".sfs"));
-                    if (!backup.Exists)
+                    string filepath = Path.Combine(activeDirectory, "persistent Backup " + i.ToString() + ".sfs");
+                    if (!File.Exists(filepath))
                     {
-                        replaceBackup = "Persistent Backup " + i.ToString();
+                        replaceBackup = "persistent Backup " + i.ToString();
                         break;
                     }
-                    else
+                    else                   //If all backups have been written, check for the oldest file and rewrite that one
                     {
-                        DateTime modified = backup.LastAccessTime;
+                        DateTime modified = File.GetLastWriteTime(filepath);
                         if (modified < oldestFile)
                         {
-                            replaceBackup = "Persistent Backup " + i.ToString();
+                            replaceBackup = "persistent Backup " + i.ToString();
                             oldestFile = modified;
                         }
                     }
@@ -84,16 +81,19 @@ namespace AutoSave
             }
         }
 
-        public int getMaxSave(string max)
+        public int getMaxSave(string entry) //Make sure that no amount of screwing up the Settings
         {
+            int number = 3;
             node = ConfigNode.Load(path);
             if (node != null)
-            {
-                string value = node.GetValue(max);
-                if (value != null) return Convert.ToInt32(value);
+            {                
+                string value = node.GetValue(entry);
+                if (value == null) return number;
+                else if (Int32.TryParse(value, out number))
+                    return number;
                 else return 3;
             }
-            else return 3;
+            else return number;
         }
     }
 }
