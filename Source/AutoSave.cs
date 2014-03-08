@@ -81,7 +81,7 @@ namespace AutoSave
             }
         }
 
-        public int getMaxSave(string entry) //Make sure that no amount of screwing up the Settings
+        public int getMaxSave(string entry) //Make sure that no amount of screwing up the Settings file will break the plugin
         {
             int number = 3;
             node = ConfigNode.Load(path);
