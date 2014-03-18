@@ -63,7 +63,7 @@ namespace AutoSave
                     string filepath = Path.Combine(activeDirectory, "persistent Backup " + i.ToString() + ".sfs");
                     if (!File.Exists(filepath))
                     {
-                        replaceBackup = "persistent Backup " + i.ToString();
+                        replaceBackup = "persistent Backup " + i.ToString() + ".sfs";
                         break;
                     }
                     else                   //If all backups have been written, check for the oldest file and rewrite that one
@@ -71,12 +71,13 @@ namespace AutoSave
                         DateTime modified = File.GetLastWriteTime(filepath);
                         if (modified < oldestFile)
                         {
-                            replaceBackup = "persistent Backup " + i.ToString();
+                            replaceBackup = "persistent Backup " + i.ToString() + ".sfs";
                             oldestFile = modified;
                         }
                     }
                 }
-                var save = GamePersistence.SaveGame(replaceBackup, HighLogic.fetch.GameSaveFolder, 0);
+                File.Copy(Path.Combine(activeDirectory, "persistent.sfs"), Path.Combine(activeDirectory, replaceBackup), true);
+                print("Backup saved as " + replaceBackup);
                 GameEvents.onGameSceneLoadRequested.Remove(saveBackup);
             }
         }
