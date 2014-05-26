@@ -31,55 +31,56 @@ using System.IO;
 
 namespace AutoSave
 {
-    [KSPAddon(KSPAddon.Startup.MainMenu, false)]
+    [KSPAddonImproved(KSPAddonImproved.Startup.SpaceCenter | KSPAddonImproved.Startup.Flight | KSPAddonImproved.Startup.EditorAny | KSPAddonImproved.Startup.TrackingStation | KSPAddonImproved.Startup.MainMenu, false)]
     public class AutoSave : MonoBehaviour
     {
         private int max = 3;
-        protected ConfigNode node = null;
+        private ConfigNode node = null;
         private string path = null;
+        private static bool Saved;
 
         public void Start()
         {
-            GameEvents.onGameSceneLoadRequested.Add(saveBackup);
-        }
-        
-        public void saveBackup(GameScenes scene)
-        {            
             if (HighLogic.LoadedScene == GameScenes.MAINMENU)
+                Saved = false;
+            else if (Saved == false)
+                saveBackup();
+        }
+
+        public void saveBackup()
+        {
+            DateTime oldestFile = new DateTime(2050, 1, 1);
+            string replaceBackup = null;
+            string activeDirectory = Path.Combine(Path.Combine(new DirectoryInfo(KSPUtil.ApplicationRootPath).FullName, "saves"), HighLogic.fetch.GameSaveFolder);
+            path = Path.Combine(new DirectoryInfo(KSPUtil.ApplicationRootPath).FullName, "GameData/AutoSave/Settings.cfg").Replace("\\", "/");
+
+            if (File.Exists(path))       //Load Settings.cfg to check for change in max number of saves
             {
-                DateTime oldestFile = new DateTime(2050,1,1);
-                string replaceBackup = null;
-                string activeDirectory = Path.Combine(Path.Combine(new DirectoryInfo(KSPUtil.ApplicationRootPath).FullName, "saves"), HighLogic.fetch.GameSaveFolder);                
-                path = Path.Combine(new DirectoryInfo(KSPUtil.ApplicationRootPath).FullName, "GameData/AutoSave/Settings.cfg").Replace("\\","/");
+                max = getMaxSave("MaxSaves");
+                print("Changing max saves value to " + max.ToString());
+            }
 
-                if (File.Exists(path))       //Load Settings.cfg to check for change in max number of saves
+            for (int i = 0; i < max; i++)
+            {
+                string filepath = Path.Combine(activeDirectory, "persistent Backup " + i.ToString() + ".sfs");
+                if (!File.Exists(filepath))
                 {
-                    max = getMaxSave("MaxSaves");
-                    print("Changing max saves value to " + max.ToString());
+                    replaceBackup = "persistent Backup " + i.ToString() + ".sfs";
+                    break;
                 }
-
-                for (int i = 0; i < max; i++)
+                else                   //If all backups have been written, check for the oldest file and rewrite that one
                 {
-                    string filepath = Path.Combine(activeDirectory, "persistent Backup " + i.ToString() + ".sfs");
-                    if (!File.Exists(filepath))
+                    DateTime modified = File.GetLastWriteTime(filepath);
+                    if (modified < oldestFile)
                     {
                         replaceBackup = "persistent Backup " + i.ToString() + ".sfs";
-                        break;
-                    }
-                    else                   //If all backups have been written, check for the oldest file and rewrite that one
-                    {
-                        DateTime modified = File.GetLastWriteTime(filepath);
-                        if (modified < oldestFile)
-                        {
-                            replaceBackup = "persistent Backup " + i.ToString() + ".sfs";
-                            oldestFile = modified;
-                        }
+                        oldestFile = modified;
                     }
                 }
-                File.Copy(Path.Combine(activeDirectory, "persistent.sfs"), Path.Combine(activeDirectory, replaceBackup), true);
-                print("Backup saved as " + replaceBackup);
-                GameEvents.onGameSceneLoadRequested.Remove(saveBackup);
             }
+            File.Copy(Path.Combine(activeDirectory, "persistent.sfs"), Path.Combine(activeDirectory, replaceBackup), true);
+            print("Backup saved as " + replaceBackup);
+            Saved = true;
         }
 
         public int getMaxSave(string entry) //Make sure that no amount of screwing up the Settings file will break the plugin
